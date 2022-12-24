@@ -74,6 +74,7 @@ func (b *Preamble) Unmarshal(d []byte) (int, error) {
 
 func (q *QuietQuery) Unmarshal(d []byte) (int, error) {
 	r := NewByteReader(d)
+
 	if q.Preamble == nil {
 		q.Preamble = &Preamble{}
 		if n, err := q.Preamble.unmarshalWith(r); err != nil {
@@ -155,20 +156,34 @@ func (b *byteReader) string() (string, error) {
 }
 
 func (q *QuietReponse) Marshal() ([]byte, error) {
-	size := 1 // Version
-	size += 1 // IsQuietTime
-	size += 2 // uint8 (1) * 2
+	w := byteWriter{
+		Buffer: bytes.NewBuffer(nil),
+	}
 
-	boolean := func(v bool) uint64 {
+	if q.Preamble == nil {
+		q.Preamble = &Preamble{
+			Version:    1,
+			PacketType: QuietResponseType,
+		}
+	}
+
+	n := q.Preamble.marshalWith(&w)
+
+	size := n
+	size += 1 // IsQuietTime
+	size += 1 // uint8
+	size += w.strSize(q.Whoru)
+	w.Grow(size)
+
+	boolean := func(v bool) int {
 		if v {
 			return 1
 		}
 		return 0
 	}
+	w.vint(boolean(q.IsQuietTime))
+	w.vint(int(q.WakeUpHour))
+	w.str(q.Whoru)
 
-	data := make([]byte, size)
-	binary.PutUvarint(data, uint64(1))
-	binary.PutUvarint(data, boolean(q.IsQuietTime))
-	binary.PutUvarint(data, uint64(q.WakeUpHour))
-	return data, nil
+	return w.Bytes(), nil
 }

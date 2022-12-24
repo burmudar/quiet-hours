@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	ListenPort                = 20111
-	CommandPort               = 20112
-	QuietQueryType PacketType = 1
+	ListenPort                   = 20111
+	CommandPort                  = 20112
+	QuietQueryType    PacketType = 1
+	QuietResponseType PacketType = 2
 )
 
 var QuietHours = []byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
@@ -63,8 +64,9 @@ func handleQuery(p Preamble, data []byte) ([]byte, error) {
 	}
 
 	resp := QuietReponse{
-		WakeUpHour:  uint16(wakeUpIn),
+		WakeUpHour:  uint(wakeUpIn),
 		IsQuietTime: inQuietHours,
+		Whoru:       q.Whoami,
 	}
 
 	log.Printf("%+v", resp)
@@ -76,11 +78,12 @@ type PacketType uint16
 
 func (s *Server) listenForMessages(conn net.PacketConn) {
 	process := func(conn net.PacketConn, packet []byte, addr net.Addr) {
-		log.Printf("[INFO] processing packet %d", len(packet))
+		log.Printf("[INFO] processing packet with size %d", len(packet))
 		p := &Preamble{}
 		n, err := p.Unmarshal(packet)
 		if err != nil {
 			log.Printf("[ERR] error processing preamble: %s", err)
+			return
 		}
 
 		switch p.PacketType {
@@ -88,6 +91,7 @@ func (s *Server) listenForMessages(conn net.PacketConn) {
 			if data, err := handleQuery(*p, packet[n:]); err != nil {
 				log.Printf("[ERR] error processing query: %s", err)
 			} else {
+				log.Printf("[INFO] resp: %v", data)
 				conn.WriteTo(data, addr)
 			}
 		default:
@@ -105,9 +109,11 @@ func (s *Server) listenForMessages(conn net.PacketConn) {
 				var packet [512]byte
 				n, addr, err := conn.ReadFrom(packet[:])
 				if n >= 0 && n <= len(packet) {
-					go process(conn, packet[:], addr)
+					log.Printf("[INFO] Read %d from Conn", n)
+					go process(conn, packet[:n], addr)
 				} else if err != nil {
 					log.Printf("[ERR] error processing packet: %s", err)
+					return
 				}
 			}
 		}
@@ -120,6 +126,7 @@ func (s *Server) Listen() {
 	if err != nil {
 		log.Fatalf("failed to start udp listener: %s", err)
 	}
+	defer conn.Close()
 
 	go s.listenForMessages(conn)
 	log.Printf("Server started. Listening on %d", s.Port)

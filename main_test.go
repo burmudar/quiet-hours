@@ -28,8 +28,8 @@ func TestQuietQueryEncoding(t *testing.T) {
 			t.Fatalf("unmarshalling failed: %s", err)
 		}
 
-		if q.Version != o.Version {
-			t.Errorf("version mismatched, got %d wanted %d", o.Version, q.Version)
+		if q.Preamble.Version != o.Preamble.Version {
+			t.Errorf("version mismatched, got %d wanted %d", o.Preamble.Version, q.Preamble.Version)
 		}
 		if q.Whoami != o.Whoami {
 			t.Errorf("whoami mismatched, got %s wanted %s", o.Whoami, q.Whoami)

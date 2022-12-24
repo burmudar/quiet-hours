@@ -11,12 +11,13 @@ type Preamble struct {
 }
 
 type QuietQuery struct {
-	*Preamble
-	Whoami string
+	Preamble *Preamble
+	Whoami   string
 }
 
 type QuietReponse struct {
-	*Preamble
+	Preamble    *Preamble
 	IsQuietTime bool
-	WakeUpHour  uint16
+	WakeUpHour  uint
+	Whoru       string
 }
