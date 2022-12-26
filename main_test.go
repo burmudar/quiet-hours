@@ -6,6 +6,39 @@ import (
 	"testing"
 )
 
+func TestQuietResponse(t *testing.T) {
+	t.Run("marshal and unmarshall return the same thing", func(t *testing.T) {
+		resp := QuietResponse{
+			IsQuietTime: true,
+			WakeUpHour:  7,
+			Whoru:       "testing",
+		}
+
+		data, err := resp.Marshal()
+		if err != nil {
+			t.Fatalf("failed to marshal: %s", err)
+		}
+
+		got := &QuietResponse{}
+		got.Unmarshal(data)
+
+		if resp.Preamble.Version != got.Preamble.Version {
+			t.Errorf("version mismatched, got %d wanted %d", got.Preamble.Version, resp.Preamble.Version)
+		}
+
+		if resp.IsQuietTime != got.IsQuietTime {
+			t.Errorf("got %v wanted %v", got.IsQuietTime, resp.IsQuietTime)
+		}
+
+		if resp.WakeUpHour != got.WakeUpHour {
+			t.Errorf("got %d wanted %d", got.WakeUpHour, resp.WakeUpHour)
+		}
+		if resp.Whoru != got.Whoru {
+			t.Errorf("got %s wanted %s", got.Whoru, resp.Whoru)
+		}
+	})
+}
+
 func TestQuietQueryEncoding(t *testing.T) {
 
 	t.Run("mashal and unmarshal return the same thing", func(t *testing.T) {

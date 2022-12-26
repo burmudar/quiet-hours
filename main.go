@@ -63,7 +63,7 @@ func handleQuery(p Preamble, data []byte) ([]byte, error) {
 		}
 	}
 
-	resp := QuietReponse{
+	resp := QuietResponse{
 		WakeUpHour:  uint(wakeUpIn),
 		IsQuietTime: inQuietHours,
 		Whoru:       q.Whoami,

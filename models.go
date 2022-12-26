@@ -15,7 +15,7 @@ type QuietQuery struct {
 	Whoami   string
 }
 
-type QuietReponse struct {
+type QuietResponse struct {
 	Preamble    *Preamble
 	IsQuietTime bool
 	WakeUpHour  uint

@@ -77,9 +77,9 @@ func (q *QuietQuery) Unmarshal(d []byte) (int, error) {
 
 	if q.Preamble == nil {
 		q.Preamble = &Preamble{}
-		if n, err := q.Preamble.unmarshalWith(r); err != nil {
-			return n, err
-		}
+	}
+	if n, err := q.Preamble.unmarshalWith(r); err != nil {
+		return n, err
 	}
 	log.Printf("packet: %v", d)
 
@@ -119,6 +119,40 @@ func (q *QuietQuery) Marshal() ([]byte, error) {
 	return w.Bytes(), nil
 }
 
+func (q *QuietResponse) Unmarshal(data []byte) (int, error) {
+	w := byteReader{
+		data: data,
+	}
+
+	if q.Preamble == nil {
+		q.Preamble = &Preamble{}
+	}
+	n, err := q.Preamble.unmarshalWith(&w)
+	if err != nil {
+		return n, err
+	}
+
+	if v, err := w.uint(); err != nil {
+		return w.read, err
+	} else {
+		q.IsQuietTime = int(v) == 1
+	}
+
+	if v, err := w.uint(); err != nil {
+		return w.read, err
+	} else {
+		q.WakeUpHour = uint(v)
+	}
+
+	if v, err := w.string(); err != nil {
+		return w.read, err
+	} else {
+		q.Whoru = v
+	}
+
+	return w.read, nil
+}
+
 type byteReader struct {
 	read int
 	data []byte
@@ -155,7 +189,7 @@ func (b *byteReader) string() (string, error) {
 	return string(data), nil
 }
 
-func (q *QuietReponse) Marshal() ([]byte, error) {
+func (q *QuietResponse) Marshal() ([]byte, error) {
 	w := byteWriter{
 		Buffer: bytes.NewBuffer(nil),
 	}
