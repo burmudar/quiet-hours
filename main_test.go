@@ -7,6 +7,35 @@ import (
 )
 
 func TestQuietResponse(t *testing.T) {
+	t.Run("Preamble is not overwritten when set", func(t *testing.T) {
+		resp := QuietResponse{
+			Preamble: &Preamble{
+				Version:    9,
+				PacketType: 5,
+			},
+			IsQuietTime: true,
+			WakeUpHour:  7,
+			Whoru:       "testing",
+		}
+
+		data, err := resp.Marshal()
+		if err != nil {
+			t.Fatalf("failed to marshal: %s", err)
+		}
+
+		got := &QuietResponse{}
+		_, err = got.Unmarshal(data)
+		if err != nil && !strings.Contains(err.Error(), "unsupported version") {
+			t.Fatalf("failed to unmarshal: %s", err)
+		}
+
+		if got.Preamble.Version != resp.Preamble.Version {
+			t.Errorf("version mismatched - got %d, wanted %d", got.Preamble.Version, resp.Preamble.Version)
+		}
+		if got.Preamble.PacketType != resp.Preamble.PacketType {
+			t.Errorf("packet type mismatched - got %d, wanted %d", got.Preamble.PacketType, resp.Preamble.PacketType)
+		}
+	})
 	t.Run("marshal and unmarshall return the same thing", func(t *testing.T) {
 		resp := QuietResponse{
 			IsQuietTime: true,
@@ -66,6 +95,26 @@ func TestQuietQueryEncoding(t *testing.T) {
 		}
 		if q.Whoami != o.Whoami {
 			t.Errorf("whoami mismatched, got %s wanted %s", o.Whoami, q.Whoami)
+		}
+	})
+	t.Run("fail when packet type mismatch", func(t *testing.T) {
+		q := QuietQuery{
+			Preamble: &Preamble{
+				Version:    1,
+				PacketType: QuietQueryType + 1,
+			},
+			Whoami: "william",
+		}
+		data, err := q.Marshal()
+		if err != nil {
+			t.Fatalf("marshalling failed: %s", err)
+		}
+
+		o := &QuietQuery{}
+		if _, err := o.Unmarshal(data); err == nil {
+			t.Fatalf("expected error for packet type mismatch got: %v", err)
+		} else if !strings.Contains(err.Error(), "packet type mismatch") {
+			t.Errorf("unexpected error: %s", err)
 		}
 	})
 	t.Run("fail when unsupported version", func(t *testing.T) {

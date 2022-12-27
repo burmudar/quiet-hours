@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"log"
 )
 
 const SupportedVersion = 1
@@ -53,9 +52,6 @@ func (b *Preamble) unmarshalWith(r *byteReader) (int, error) {
 	if err != nil {
 		return r.read, fmt.Errorf("failed to read version: %s", err)
 	}
-	if version != SupportedVersion {
-		return r.read, fmt.Errorf("unsupported version: %d", version)
-	}
 
 	typ, err := r.uint16()
 	if err != nil {
@@ -81,7 +77,12 @@ func (q *QuietQuery) Unmarshal(d []byte) (int, error) {
 	if n, err := q.Preamble.unmarshalWith(r); err != nil {
 		return n, err
 	}
-	log.Printf("packet: %v", d)
+	if q.Preamble.Version != SupportedVersion {
+		return r.read, fmt.Errorf("unsupported version: %d", q.Preamble.Version)
+	}
+	if q.Preamble.PacketType != q.Type() {
+		return r.read, fmt.Errorf("packet type mismatch - got type %d but unmarshal type is %d", q.Preamble.PacketType, q.Type())
+	}
 
 	whoami, err := r.string()
 	if err != nil {
@@ -120,37 +121,40 @@ func (q *QuietQuery) Marshal() ([]byte, error) {
 }
 
 func (q *QuietResponse) Unmarshal(data []byte) (int, error) {
-	w := byteReader{
+	r := byteReader{
 		data: data,
 	}
 
 	if q.Preamble == nil {
 		q.Preamble = &Preamble{}
 	}
-	n, err := q.Preamble.unmarshalWith(&w)
+	n, err := q.Preamble.unmarshalWith(&r)
 	if err != nil {
 		return n, err
 	}
+	if q.Preamble.Version != SupportedVersion {
+		return r.read, fmt.Errorf("unsupported version: %d", q.Preamble.Version)
+	}
 
-	if v, err := w.uint(); err != nil {
-		return w.read, err
+	if v, err := r.uint(); err != nil {
+		return r.read, err
 	} else {
 		q.IsQuietTime = int(v) == 1
 	}
 
-	if v, err := w.uint(); err != nil {
-		return w.read, err
+	if v, err := r.uint(); err != nil {
+		return r.read, err
 	} else {
 		q.WakeUpHour = uint(v)
 	}
 
-	if v, err := w.string(); err != nil {
-		return w.read, err
+	if v, err := r.string(); err != nil {
+		return r.read, err
 	} else {
 		q.Whoru = v
 	}
 
-	return w.read, nil
+	return r.read, nil
 }
 
 type byteReader struct {
