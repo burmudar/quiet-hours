@@ -1,4 +1,11 @@
-package main
+package models
+
+const (
+	QuietQueryType    PacketType = 1
+	QuietResponseType PacketType = 2
+)
+
+type PacketType uint16
 
 type Packet[T any] struct {
 	Preamble Preamble

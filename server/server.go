@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -8,13 +8,13 @@ import (
 	"net/netip"
 	"sync"
 	"time"
+
+	"github.com/burmudar/quiet-hours/models"
 )
 
 const (
-	ListenPort                   = 20111
-	CommandPort                  = 20112
-	QuietQueryType    PacketType = 1
-	QuietResponseType PacketType = 2
+	ListenPort  = 20111
+	CommandPort = 20112
 )
 
 var QuietHours = []byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
@@ -27,7 +27,7 @@ type Server struct {
 	done   chan any
 }
 
-func NewServer(addr string, port int) *Server {
+func New(addr string, port int) *Server {
 	return &Server{
 		Addr: addr,
 		Port: port,
@@ -37,8 +37,8 @@ func NewServer(addr string, port int) *Server {
 
 func (s *Server) Shutdown() { close(s.done) }
 
-func handleQuery(p Preamble, data []byte) ([]byte, error) {
-	var q QuietQuery
+func handleQuery(p models.Preamble, data []byte) ([]byte, error) {
+	var q models.QuietQuery
 	if q.Type() != p.PacketType {
 		return nil, fmt.Errorf("packet type mismatch")
 	}
@@ -63,7 +63,7 @@ func handleQuery(p Preamble, data []byte) ([]byte, error) {
 		}
 	}
 
-	resp := QuietResponse{
+	resp := models.QuietResponse{
 		WakeUpHour:  uint(wakeUpIn),
 		IsQuietTime: inQuietHours,
 		Whoru:       q.Whoami,
@@ -74,12 +74,11 @@ func handleQuery(p Preamble, data []byte) ([]byte, error) {
 	return resp.Marshal()
 }
 
-type PacketType uint16
-
 func (s *Server) listenForMessages(conn net.PacketConn) {
 	process := func(conn net.PacketConn, packet []byte, addr net.Addr) {
 		log.Printf("[INFO] processing packet with size %d", len(packet))
-		p := &Preamble{}
+		log.Printf("[DEBUG] received: %v", packet)
+		p := &models.Preamble{}
 		n, err := p.Unmarshal(packet)
 		if err != nil {
 			log.Printf("[ERR] error processing preamble: %s", err)
@@ -87,7 +86,7 @@ func (s *Server) listenForMessages(conn net.PacketConn) {
 		}
 
 		switch p.PacketType {
-		case QuietQueryType:
+		case models.QuietQueryType:
 			if data, err := handleQuery(*p, packet[n:]); err != nil {
 				log.Printf("[ERR] error processing query: %s", err)
 			} else {
@@ -132,16 +131,4 @@ func (s *Server) Listen() {
 	log.Printf("Server started. Listening on %d", s.Port)
 	s.wg.Add(1)
 	s.wg.Wait()
-}
-
-func main() {
-	server := NewServer("127.0.0.1", ListenPort)
-
-	QuietHours[8] = 0
-	QuietHours[9] = 0
-	QuietHours[10] = 0
-	QuietHours[11] = 0
-	QuietHours[12] = 0
-	QuietHours[13] = 0
-	server.Listen()
 }

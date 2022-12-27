@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"bytes"
@@ -73,9 +73,9 @@ func (q *QuietQuery) Unmarshal(d []byte) (int, error) {
 
 	if q.Preamble == nil {
 		q.Preamble = &Preamble{}
-	}
-	if n, err := q.Preamble.unmarshalWith(r); err != nil {
-		return n, err
+		if n, err := q.Preamble.unmarshalWith(r); err != nil {
+			return n, err
+		}
 	}
 	if q.Preamble.Version != SupportedVersion {
 		return r.read, fmt.Errorf("unsupported version: %d", q.Preamble.Version)
@@ -127,10 +127,10 @@ func (q *QuietResponse) Unmarshal(data []byte) (int, error) {
 
 	if q.Preamble == nil {
 		q.Preamble = &Preamble{}
-	}
-	n, err := q.Preamble.unmarshalWith(&r)
-	if err != nil {
-		return n, err
+		n, err := q.Preamble.unmarshalWith(&r)
+		if err != nil {
+			return n, err
+		}
 	}
 	if q.Preamble.Version != SupportedVersion {
 		return r.read, fmt.Errorf("unsupported version: %d", q.Preamble.Version)
